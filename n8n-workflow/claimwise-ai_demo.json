@@ -1,0 +1,365 @@
+{
+  "name": "claimwise-ai_demo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "claimwise-demo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        16
+      ],
+      "id": "b875d5d0-90e2-4c57-a516-a220335e57f3",
+      "name": "Webhook",
+      "webhookId": "533e136a-2835-4841-8868-a7f5e3099bfd"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "bill",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        16
+      ],
+      "id": "8b0fdd08-f2ac-4f4f-9b4f-9e001a150db4",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "policy",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        192
+      ],
+      "id": "7809d644-f34b-41d3-8334-0e09f2493e15",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0b2be05-b04c-4681-9208-e84e1743ac7e",
+              "name": "bill_text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        16
+      ],
+      "id": "baa39155-ec85-425c-8454-403c69014263",
+      "name": "Prepare Bill Text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9ab31ac4-3e87-4d93-a974-def432cee4c3",
+              "name": "policy_text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        544,
+        192
+      ],
+      "id": "702e5b8c-97e8-43e9-a0ca-62326badd289",
+      "name": "Prepare Policy Text"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        768,
+        32
+      ],
+      "id": "3ee6e444-b6e9-44f1-8e10-671b20f0d0cd",
+      "name": "Combine Documents"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0ae30ab3-ea2d-41c4-8a6f-e678f17f502f",
+              "name": "annual_interest",
+              "value": 12,
+              "type": "number"
+            },
+            {
+              "id": "39266361-ae00-4999-a07d-961a7447e574",
+              "name": "months",
+              "value": 12,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        944,
+        176
+      ],
+      "id": "68883cea-bc4f-426a-a373-e08608fe83d6",
+      "name": "Prepare Demo Data"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are ClaimWise AI, an assistant that helps patients understand hospital bills and health insurance policies.\n\nYour responsibility is to analyze the provided hospital bill and insurance policy and generate a structured, evidence-based claim analysis.\n\nHOSPITAL BILL:\n{{ $json.bill_text }}\n\nINSURANCE POLICY:\n{{ $json.policy_text }}\n\n## 1. ANALYSIS TASKS\n\nAnalyze the documents and:\n\n1. Identify major hospital bill categories and individual expenses.\n2. Identify expenses that may potentially be covered based ONLY on explicit evidence in the insurance policy.\n3. Identify expenses and documents requiring manual verification.\n4. Identify possible duplicate charges that require verification.\n5. Identify confirmed missing documents relevant to claim submission.\n6. Extract relevant policy clauses and evidence.\n7. Explain the findings in simple language for the patient.\n8. Extract the total hospital bill amount from the uploaded hospital bill.\n9. Estimate potential insurance coverage using only the bill and explicit policy terms.\n\n## 2. IMPORTANT ANALYSIS RULES\n\n- Never make a final insurance approval or rejection decision.\n- Never guarantee reimbursement or claim settlement.\n- Never invent policy clauses, coverage limits, exclusions, expenses, or facts.\n- Use only the supplied hospital bill and insurance policy.\n- Do not assume an expense is covered merely because it appears on the bill.\n- Do not assume an expense is excluded unless the policy explicitly supports that conclusion.\n- If coverage cannot be established from the policy, use the exact phrase: \"Not specified in provided policy\".\n- Do not invent policy page numbers or quotations.\n- Do not infer ICU duration from the total hospital stay.\n- Do not accuse the hospital or any individual of fraud.\n- A human insurance reviewer must verify all findings.\n\n## 3. DOCUMENT AVAILABILITY RULES\n\nUse these document availability facts:\n\n- Lab reports are available according to the bill.\n- Discharge summary is available according to the bill.\n- Original pharmacy receipts are confirmed missing.\n- Doctor prescriptions: availability is unknown. Add to items_requiring_review.\n- Payment receipts: availability is unknown. Add to items_requiring_review.\n- Do not classify doctor prescriptions or payment receipts as confirmed missing.\n- Do not list lab reports or discharge summary as missing.\n- Include \"Original pharmacy receipts\" in missing_documents because their absence is confirmed.\n\nDo not invent additional missing documents.\n\n## 4. DUPLICATE CHARGE ANALYSIS\n\n- Compare bill entries for identical or potentially repeated charges.\n- Consider descriptions, dates, quantities, and amounts where available.\n- Flag only plausible duplicate entries supported by the bill.\n- Do not assume two similar entries are duplicates without sufficient evidence.\n- If no possible duplicates are identified, return an empty array.\n\n## 5. POTENTIALLY COVERED EXPENSES\n\nFor each potentially covered expense:\n\n- Include the exact expense name from the bill.\n- Explain why it may potentially be covered.\n- Provide supporting policy evidence.\n- Do not classify an expense as potentially covered without relevant policy support.\n- If the policy is unclear, place the expense under items_requiring_review instead.\n\n## 6. DYNAMIC FINANCIAL ANALYSIS\n\nExtract and estimate financial amounts from the uploaded documents.\n\n### A. Total hospital bill\n\n- Extract the final total bill amount from the hospital bill.\n- Use the final payable or total amount clearly stated in the bill.\n- Do not calculate the total by adding individual entries if a reliable final total is available.\n- Avoid double-counting subtotals, taxes, deposits, discounts, or advance payments.\n- Return the amount as a numeric value in INR, without currency symbols.\n- If the total cannot be reliably identified, return 0 and explain the uncertainty in items_requiring_review and explanation.\n\n### B. Estimated insurance coverage\n\n- Estimate potentially eligible expenses only using explicit policy terms and evidence from the bill.\n- Consider applicable coverage limits, deductibles, co-payments, sub-limits, exclusions, waiting periods, room-rent restrictions, and other conditions only when explicitly stated in the supplied policy.\n- Do not assume that every potentially covered expense will be reimbursed.\n- Do not count the same expense more than once.\n- Do not exceed the total hospital bill amount.\n- Do not invent missing limits, percentages, or amounts.\n- If sufficient information is unavailable to calculate a reasonable estimate, return 0.\n- When returning 0 because of insufficient policy information, clearly explain that coverage cannot be reliably estimated and requires manual verification.\n- The amount is an illustrative estimate, not an approved insurance benefit.\n\n### C. Financial consistency\n\n- total_bill_amount must be a number greater than or equal to zero.\n- estimated_coverage_amount must be a number greater than or equal to zero.\n- estimated_coverage_amount must never exceed total_bill_amount.\n- Do not use hardcoded financial values.\n- Do not use the example amounts as actual results.\n- Do not confuse the total bill, eligible expenses, approved coverage, and patient share.\n\n## 7. REQUIRED JSON OUTPUT\n\nReturn exactly one JSON object with these nine top-level fields:\n\n{\n  \"potentially_covered_items\": [],\n  \"items_requiring_review\": [],\n  \"missing_documents\": [],\n  \"possible_duplicates\": [],\n  \"policy_evidence\": [],\n  \"explanation\": \"\",\n  \"confidence\": \"Low\",\n  \"total_bill_amount\": 0,\n  \"estimated_coverage_amount\": 0\n}\n\nThe required structure for each field is:\n\npotentially_covered_items:\nAn array of objects containing exactly:\n- item: string\n- reason: string\n- policy_evidence: string\n\nitems_requiring_review:\nAn array of objects containing exactly:\n- item: string\n- reason: string\n\nmissing_documents:\nAn array of strings.\n\npossible_duplicates:\nAn array of objects containing exactly:\n- duplicate: string\n- note: string\n\npolicy_evidence:\nAn array of strings.\n\nexplanation:\nA patient-friendly summary as a string. Include financial uncertainty wherever applicable.\n\nconfidence:\nExactly one of:\n- Low\n- Medium\n- High\n\ntotal_bill_amount:\nA numeric value representing the total hospital bill amount in INR.\n\nestimated_coverage_amount:\nA numeric value representing the illustrative potential insurance coverage estimate in INR.\n\n## 8. STRICT OUTPUT VALIDATION\n\nBefore returning the result, verify every requirement:\n\n1. The response is one valid JSON object.\n2. All nine top-level fields are present.\n3. Every required field has the correct data type.\n4. Every nested object contains all required keys.\n5. All values inside arrays are of the required types.\n6. All object properties contain strings where specified.\n7. No null values are used.\n8. No additional top-level fields are included.\n9. No trailing commas exist.\n10. All keys and string values use double quotes.\n11. Empty arrays are used when no findings exist.\n12. Confidence is exactly Low, Medium, or High.\n13. Do not include example values as actual findings unless supported by the documents.\n14. Both financial fields are numeric.\n15. Estimated coverage never exceeds the total bill.\n16. Do not fabricate a financial estimate when the documents do not support it.\n\n## 9. CONFIDENCE GUIDELINES\n\nLow:\nImportant information is missing, policy wording is unclear, or substantial manual verification is required.\n\nMedium:\nSome expenses can be evaluated using policy evidence, but important items still require verification.\n\nHigh:\nThe bill and policy provide clear and consistent evidence for most findings.\n\nDo not assign High confidence merely because the model has generated a complete JSON response.\n\n## 10. FINAL RESPONSE INSTRUCTION\n\n- Return ONLY the JSON object.\n- Do not return Markdown.\n- Do not use code fences.\n- Do not include introductory text.\n- Do not include explanations outside the JSON.\n- Do not include your internal reasoning.\n- Do not add fields beyond the nine specified fields.\n\nA human insurance reviewer must verify all findings.\n\nClaimWise AI provides educational claim analysis only. Its findings are not insurance approval, rejection, or a guarantee of reimbursement.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1168,
+        160
+      ],
+      "id": "fdaa2c07-a9c2-455e-afdb-3e781ce50710",
+      "name": "Claim Analyzer Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $input.first().json;\nconst analysis = input.output;\n\nif (!analysis || typeof analysis !== \"object\") {\n  throw new Error(\"Claim Analyzer Agent returned invalid structured output.\");\n}\n\nconst demoData = $('Prepare Demo Data').first().json;\n\nconst totalBill = Number(analysis.total_bill_amount);\nconst estimatedCoverage = Number(analysis.estimated_coverage_amount);\n\nconst annualInterest = Number(demoData.annual_interest);\nconst months = Number(demoData.months);\n\nif (\n  !Number.isFinite(totalBill) ||\n  !Number.isFinite(estimatedCoverage) ||\n  !Number.isFinite(annualInterest) ||\n  !Number.isFinite(months) ||\n  totalBill <= 0 ||\n  estimatedCoverage < 0 ||\n  estimatedCoverage > totalBill ||\n  annualInterest < 0 ||\n  months <= 0\n) {\n  throw new Error(\"Invalid financial analysis data. Check Gemini output and Prepare Demo Data.\");\n}\n\nconst patientShare = totalBill - estimatedCoverage;\nconst monthlyRate = annualInterest / 100 / 12;\n\nconst emi = monthlyRate === 0\n  ? patientShare / months\n  : patientShare * monthlyRate *\n    Math.pow(1 + monthlyRate, months) /\n    (Math.pow(1 + monthlyRate, months) - 1);\n\nreturn [{\n  json: {\n    ...analysis,\n    financial_estimate: {\n      total_bill_inr: totalBill,\n      illustrative_coverage_inr: estimatedCoverage,\n      illustrative_patient_share_inr: patientShare,\n      annual_interest_percent: annualInterest,\n      tenure_months: months,\n      estimated_monthly_emi_inr: Math.round(emi),\n      disclaimer: \"Illustrative estimate only. Actual insurance coverage and financing are not approved or guaranteed.\"\n    },\n    review_status: \"Human review required\"\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        256
+      ],
+      "id": "c63dab0f-4f96-4230-a9e3-54a6dac13135",
+      "name": "Parse & Calculate"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"potentially_covered_items\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"item\": { \"type\": \"string\" },\n          \"reason\": { \"type\": \"string\" },\n          \"policy_evidence\": { \"type\": \"string\" }\n        },\n        \"required\": [\"item\", \"reason\", \"policy_evidence\"]\n      }\n    },\n    \"items_requiring_review\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"item\": { \"type\": \"string\" },\n          \"reason\": { \"type\": \"string\" }\n        },\n        \"required\": [\"item\", \"reason\"]\n      }\n    },\n    \"missing_documents\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"possible_duplicates\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"duplicate\": { \"type\": \"string\" },\n          \"note\": { \"type\": \"string\" }\n        },\n        \"required\": [\"duplicate\", \"note\"]\n      }\n    },\n    \"policy_evidence\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"explanation\": {\n      \"type\": \"string\"\n    },\n    \"confidence\": {\n      \"type\": \"string\",\n      \"enum\": [\"Low\", \"Medium\", \"High\"]\n    },\n    \"total_bill_amount\": {\n      \"type\": \"number\"\n    },\n    \"estimated_coverage_amount\": {\n      \"type\": \"number\"\n    }\n  },\n  \"required\": [\n    \"potentially_covered_items\",\n    \"items_requiring_review\",\n    \"missing_documents\",\n    \"possible_duplicates\",\n    \"policy_evidence\",\n    \"explanation\",\n    \"confidence\",\n    \"total_bill_amount\",\n    \"estimated_coverage_amount\"\n  ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1344,
+        368
+      ],
+      "id": "96fb21b8-ba19-4681-86c0-6e0b0e457029",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1760,
+        256
+      ],
+      "id": "07e8fc51-6341-456a-a55e-ebdc1d0d8e8f",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        464
+      ],
+      "id": "d8241da6-6289-45fe-a48f-20cf327de537",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Y0ijIlSYRVJylXGN",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Prepare Bill Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Policy Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Bill Text": {
+      "main": [
+        [
+          {
+            "node": "Combine Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Policy Text": {
+      "main": [
+        [
+          {
+            "node": "Combine Documents",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Combine Documents": {
+      "main": [
+        [
+          {
+            "node": "Prepare Demo Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Demo Data": {
+      "main": [
+        [
+          {
+            "node": "Claim Analyzer Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Analyzer Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse & Calculate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Claim Analyzer Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Calculate": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Claim Analyzer Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "42bfb395-d078-4b16-891b-428da118f647",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "01d0b9aeeae335a8540c43361a9dda413544ee7e9c8993bea36395a950c0c0da"
+  },
+  "nodeGroups": [],
+  "id": "30DtkhWNit6dZ9G7",
+  "tags": []
+}
